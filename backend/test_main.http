@@ -1,0 +1,30 @@
+# Test your FastAPI endpoints
+
+GET http://127.0.0.1:8000/
+Accept: application/json
+
+###
+
+GET http://127.0.0.1:8000/hello/User
+Accept: application/json
+
+###
+
+
+POST http://127.0.0.1:8000/verify
+Content-Type: application/json
+
+{
+  "query1": "1",
+  "query2": "2",
+  "bound": 3,
+  "schema": {"FRIENDSHIP": {"USER1_ID": "INT", "USER2_ID": "INT"}, "LIKES": {"USER_ID": "INT", "PAGE_ID": "INT"}},
+  "constraints": [
+        {"primary": [{"value": "FRIENDSHIP__USER1_ID"}, {"value": "FRIENDSHIP__USER2_ID"}]},
+        {"primary": [{"value": "LIKES__USER_ID"}, {"value": "LIKES__PAGE_ID"}]},
+        {"neq": [{"value": "FRIENDSHIP__USER1_ID"}, {"value": "FRIENDSHIP__USER2_ID"}]}
+    ]
+}
+
+###
+
