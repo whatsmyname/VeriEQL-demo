@@ -4,7 +4,7 @@ sys.path.append("./verieql")
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from verieql.environment import Environment
 from verieql.errors import *
@@ -30,14 +30,14 @@ class Benchmark(BaseModel):
     query1: str
     query2: str
     bound: int
-    schema: dict
+    table_schema: dict = Field(default=None, alias='schema')
     constraints: list
 
 
 @app.post("/verify")
 async def verify(benchmark: Benchmark):
     with Environment(generate_code=True, timer=False) as env:
-        for k, v in benchmark.schema.items():
+        for k, v in benchmark.table_schema.items():
             env.create_database(attributes=v, bound_size=benchmark.bound, name=k)
         env.add_constraints(benchmark.constraints)
         env.save_checkpoints()
