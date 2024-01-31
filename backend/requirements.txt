@@ -10,5 +10,3 @@ pyyaml
 prettytable
 mysql-connector-python
 matplotlib
-sphinx
-sphinx-rtd-theme
