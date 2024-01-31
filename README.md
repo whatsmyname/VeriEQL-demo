@@ -9,45 +9,51 @@
 
 **VeriEQL** is an equivalence verifier for complex SQL queries with integrity constraints using bounded model checking, and reaches S.O.T.A. performance over three benchmark suites.
 
-![VeriEQL's Workflow.](__figures__/overview.png)
+![VeriEQL's Workflow.](__figures__/schematic_workflow_verieql.png)
 
-## ✨ What's new
+[//]: # (## ✨ What's new)
 
-- We now support **Correlated Subqueries**!
+[//]: # ()
+[//]: # (- We now support **Correlated Subqueries**!)
 
 ## 🛠️ Installation
 
-### Dependicies
+### Dependencies
+
+- NodeJS & NextJS
+- npm & yarn
+
 ```shell
 sudo apt install nodejs
 node --version
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
-npm install --global yarn
-
+npm install --global yarn next
 ```
 
-### Prerequisites
+[//]: # (### Prerequisites)
 
-- Docker
-- Docker composite
+[//]: # ()
+[//]: # (- Docker)
+
+[//]: # (- Docker composite)
 
 ## 🔖 How to use
 
-To start VeriEQL, run
-
+backend: initialize a Python environment for VeriEQL.
 ```shell
-chmod +x verieql.sh && ./verieql.sh
+cd backend
+pip install -r requirements.txt
+python -m uvicorn main:app --reload
+# visit http://localhost:8000 to ensure the backend is activated
 ```
 
-1) Test the environment
-
+frontend: 
 ```shell
-python -m test_env
+cd frontend
+python -m http.server 3000
+# visit http://localhost:3000 to use VeriEQL's web system
 ```
 
-2) Try a toy benchmark. Please refer to [run_toy.sh](./verieql/run_toy.sh).
-3) Learn VeriEQL in one-shot. Please play [main.py](./verieql/main.py). Very easy to use. :)
-4) To reproduce all experimental results, please refer to [experiment.sh](./verieql/experiment.sh) and skip some time- and resource-consuming commands with our records in [history/](./verieql/history).
 
 ## ➕ Features
 
@@ -64,7 +70,7 @@ python -m test_env
 
 If you have no background about [Z3 solver](https://github.com/Z3Prover/z3) and [the theory of integer and uninterpreted function](https://www.cs.cmu.edu/~15414/f18/lectures/15-real-world-smt.pdf), please refer to the Basics section of [tutorial](https://ericpony.github.io/z3py-tutorial/guide-examples.htm).
 
-![Encoding.](__figures__/encoding.png)
+[//]: # (![Encoding.]&#40;__figures__/encoding.png&#41;)
 
 ## 🐎 Experiments
 
@@ -128,31 +134,42 @@ A SQL pair refuted by VeriEQL.
 
 ![An example checked by VeriEQL.](__figures__/example.png)
 
-Please read our paper of *VeriEQL: Bounded Equivalence Verification for Complex SQL Queries with Integrity Constraints* to access proofs, formalization and experimental results.
+[//]: # (Please read our paper of *VeriEQL: Bounded Equivalence Verification for Complex SQL Queries with Integrity Constraints* to access proofs, formalization and experimental results.)
 
-## 🖥️ Other tools
+[//]: # (## 🖥️ Other tools)
 
-### Spurious counterexample checker
+[//]: # ()
+[//]: # (### Spurious counterexample checker)
 
-1) Use MySQL to rule out most genuine counterexamples by [counterexample_checker.py](./verieql/counterexample_checker.py)
-   (Note that all benchmarks are collected from different platforms. We must double-check those spurious counterexample manually.)
-2) Manually check spurious counterexample at [online databases](https://onecompiler.com/mysql).
-3) We found some bugs in MySQL and the LeetCode benchmarks. Please refer to [reported_bugs.csv](./verieql/reported_bugs.csv).
+[//]: # ()
+[//]: # (1&#41; Use MySQL to rule out most genuine counterexamples by [counterexample_checker.py]&#40;./verieql/counterexample_checker.py&#41;)
 
-### Z3 Acceleration
+[//]: # (   &#40;Note that all benchmarks are collected from different platforms. We must double-check those spurious counterexample manually.&#41;)
 
-We modify the source code of the Z3 solver to accelerate formalization. According to our observation, it can gain 1.1x ~ 3x speedup in formalization.
+[//]: # (2&#41; Manually check spurious counterexample at [online databases]&#40;https://onecompiler.com/mysql&#41;.)
 
-## Citation
+[//]: # (3&#41; We found some bugs in MySQL and the LeetCode benchmarks. Please refer to [reported_bugs.csv]&#40;./verieql/reported_bugs.csv&#41;.)
 
-If you use this tool in your research, please cite this project as follows,
+[//]: # (### Z3 Acceleration)
 
-```latex
-TBA
-```
+[//]: # ()
+[//]: # (We modify the source code of the Z3 solver to accelerate formalization. According to our observation, it can gain 1.1x ~ 3x speedup in formalization.)
+
+[//]: # ()
+[//]: # (## Citation)
+
+[//]: # ()
+[//]: # (If you use this tool in your research, please cite this project as follows,)
+
+[//]: # ()
+[//]: # (```latex)
+
+[//]: # (TBA)
+
+[//]: # (```)
 
 ## 📄 License
 
-**This repo is currently under a patent evaluation!**
+**The VeriEQL's backend is currently under a patent evaluation! If you want to explore it, please drop an email to us (yha244@sfu.ca).**
 
 [//]: #
