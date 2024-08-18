@@ -7,6 +7,3 @@ ordered_set
 lark
 tqdm
 pyyaml
-prettytable
-mysql-connector-python
-matplotlib

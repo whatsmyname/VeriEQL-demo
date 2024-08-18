@@ -10,15 +10,26 @@ import Header from "@/app/components/header";
 export default function Home() {
     function handleVerify() {
         try {
-            const data = {
+            let data = {
                 "query1": query1,
                 "query2": query2,
                 "bound": parseInt(bound.toString()),
                 "schema": JSON.parse(schema.toString()),
-                "constraints": constraints.toString() === '' ? [] : JSON.parse(constraints.toString())
+                "constraints": constraints.toString() === '' ? [] : JSON.parse(constraints.toString()),
+                "dialect": selectedDialect,
+            }
+            if (!(constraints instanceof Object)) {
+                data = {
+                    "query1": query1,
+                    "query2": query2,
+                    "bound": parseInt(bound.toString()),
+                    "schema": JSON.parse(schema.toString()),
+                    "constraints": constraints.toString() === '' ? [] : JSON.parse(constraints.replaceAll('.', '__').toString()),
+                    "dialect": selectedDialect,
+                }
             }
 
-            console.log(data);
+            // console.log(data);
 
             fetch('http://127.0.0.1:8000/verify', {
                 method: "POST",
@@ -27,12 +38,13 @@ export default function Home() {
                 },
                 body: JSON.stringify(data)
             }).then((response) => {
-                console.log(response)
+                // console.log(response)
                 return response.json();
             }).then((data) => {
                 const status = document.getElementById('decision');
                 const counterexample = document.getElementById('counterexample');
                 let text = '';
+
                 switch (data.decision) {
                     case 'EQU':
                         text = '<span class="text-green-600">Equivalent</span>';
@@ -57,7 +69,6 @@ export default function Home() {
                 status.innerHTML = text;
 
                 if (data.decision === 'NEQ') {
-                    const counterexample = document.getElementById('counterexample');
                     let counterexample_text = `<div class="flex space-x-2">
                     <div class="font-extrabold text-xl">
                         Counterexample
@@ -69,8 +80,38 @@ export default function Home() {
                         counterexample_text += generateCounterexampleTable(table_name, table_rows);
                     }
 
+                    counterexample_text += `
+                    <div class="collapse bg-base-200 mt-4">
+                      <input type="checkbox" />
+                      <div class="collapse-title font-medium">Show Counterexample SQL Code</div>
+                      <div class="collapse-content">
+                      <button class="btn btn-outline btn-sm mb-2" onclick="navigator.clipboard.writeText(\`${data.counterexample_sql}\`);alert('Copied to the clipboard');">
+                        Copy Code
+                      </button>
+                      <pre class="whitespace-pre-wrap text-xs">${data.counterexample_sql}</pre>
+                      </div>
+                    </div>
+                    `;
+
                     // @ts-ignore
                     counterexample.innerHTML = counterexample_text;
+                }
+
+                // <button class="btn p-2" onclick="navigator.clipboard.writeText(\`${data.pysmt_formula}\`);alert('Copied to the clipboard');">
+                //   Copy Code
+                // </button>
+
+                if (data.decision === 'NEQ' || data.decision === 'EQU') {
+                    // @ts-ignore
+                    counterexample.innerHTML += `
+                    <div class="collapse bg-base-200 mt-4">
+                      <input type="checkbox" />
+                      <div class="collapse-title font-medium">Show SMT Formula</div>
+                      <div class="collapse-content">
+                      <pre class="whitespace-pre-wrap text-xs">${data.pysmt_formula}</pre>
+                      </div>
+                    </div>
+                    `;
                 }
             });
 
@@ -116,8 +157,22 @@ export default function Home() {
     const [bound, setBound] = useState<string | number>(2);
     const [schema, setSchema] = useState<string | object>("");
     const [constraints, setConstraints] = useState<string | object>("");
+    const [selectedDialect, setSelectedDialect] = useState("Generic");
+    const [isOpen, setIsOpen] = useState(false);
+
+    const handleSelect = (dialect: string) => {
+        setSelectedDialect(dialect);
+        setIsOpen(false);
+    };
 
     function loadFig1Example() {
+        const status = document.getElementById('decision');
+        const counterexample = document.getElementById('counterexample');
+        // @ts-ignore
+        status.innerHTML = '';
+        // @ts-ignore
+        counterexample.innerHTML = '';
+
         setQuery1('SELECT ROUND((SUM(ORDER_DATE = CUSTOMER_PREF_DELIVERY_DATE) / COUNT(*)) * 100 , 2) AS IMMEDIATE_PERCENTAGE FROM DELIVERY');
         setQuery2('SELECT ROUND(SUM(IF(ORDER_DATE = CUSTOMER_PREF_DELIVERY_DATE, 1,0 ))/COUNT(DELIVERY_ID) *100,2) AS IMMEDIATE_PERCENTAGE FROM DELIVERY');
         setBound(2);
@@ -130,11 +185,18 @@ export default function Home() {
             '    }\n' +
             '}');
         setConstraints('[\n' +
-            '    {"primary": [{"value": "DELIVERY__DELIVERY_ID"}]}\n' +
+            '    {"primary": [{"value": "DELIVERY.DELIVERY_ID"}]}\n' +
             ']');
     }
 
     function loadCalciteExample() {
+        const status = document.getElementById('decision');
+        const counterexample = document.getElementById('counterexample');
+        // @ts-ignore
+        status.innerHTML = '';
+        // @ts-ignore
+        counterexample.innerHTML = '';
+
         setQuery1('SELECT DEPTNO, COUNT(*) FILTER (WHERE JOB = \'CLERK\') FROM (SELECT * FROM EMP WHERE DEPTNO = 10 UNION ALL SELECT * FROM EMP WHERE DEPTNO > 20) AS t3 GROUP BY DEPTNO');
         setQuery2('SELECT DEPTNO, COALESCE(SUM(EXPR$1), 0) FROM (SELECT DEPTNO, COUNT(*) FILTER (WHERE JOB = \'CLERK\') AS EXPR$1 FROM EMP WHERE DEPTNO = 10 GROUP BY DEPTNO UNION ALL SELECT DEPTNO, COUNT(*) FILTER (WHERE JOB = \'CLERK\') AS EXPR$1 FROM EMP WHERE DEPTNO > 20 GROUP BY DEPTNO) AS t12 GROUP BY DEPTNO');
         setBound(2);
@@ -149,29 +211,36 @@ export default function Home() {
             '                                      "SLACKER": "BOOLEAN"},\n' +
             '                  "EMP_B": {"EMPNO": "INT", "DEPTNO": "int", "ENAME": "VARCHAR", "JOB": "VARCHAR", "MGR": "INT",\n' +
             '                            "HIREDATE": "DATE", "SAL": "INT", "COMM": "INT", "SLACKER": "BOOLEAN", "BIRTHDATE": "DATE"}}');
-        setConstraints('[{"primary": [{"value": "EMP__EMPNO"}]},\n' +
-            '                       {"foreign": [{"value": "EMP__DEPTNO"}, {"value": "DEPT__DEPTNO"}]},\n' +
-            '                       {"primary": [{"value": "DEPT__DEPTNO"}]}, {"primary": [{"value": "EMPNULLABLES__EMPNO"}]},\n' +
-            '                       {"foreign": [{"value": "EMPNULLABLES__DEPTNO"}, {"value": "DEPT__DEPTNO"}]},\n' +
-            '                       {"primary": [{"value": "EMPNULLABLES_20__EMPNO"}]},\n' +
-            '                       {"foreign": [{"value": "EMPNULLABLES_20__DEPTNO"}, {"value": "DEPT__DEPTNO"}]},\n' +
-            '                       {"primary": [{"value": "EMP_B__EMPNO"}]},\n' +
-            '                       {"foreign": [{"value": "EMP_B__DEPTNO"}, {"value": "DEPT__DEPTNO"}]},\n' +
-            '                       {"not_null": {"value": "EMP__EMPNO"}}, {"not_null": {"value": "EMP__ENAME"}},\n' +
-            '                       {"not_null": {"value": "EMP__JOB"}}, {"not_null": {"value": "EMP__HIREDATE"}},\n' +
-            '                       {"not_null": {"value": "EMP__SAL"}}, {"not_null": {"value": "EMP__COMM"}},\n' +
-            '                       {"not_null": {"value": "EMP__DEPTNO"}}, {"not_null": {"value": "EMP__SLACKER"}},\n' +
-            '                       {"not_null": {"value": "DEPT__DEPTNO"}}, {"not_null": {"value": "DEPT__NAME"}},\n' +
-            '                       {"not_null": {"value": "BONUS__ENAME"}}, {"not_null": {"value": "BONUS__JOB"}},\n' +
-            '                       {"not_null": {"value": "BONUS__SAL"}}, {"not_null": {"value": "BONUS__COMM"}},\n' +
-            '                       {"not_null": {"value": "EMP_B__EMPNO"}}, {"not_null": {"value": "EMP_B__ENAME"}},\n' +
-            '                       {"not_null": {"value": "EMP_B__JOB"}}, {"not_null": {"value": "EMP_B__HIREDATE"}},\n' +
-            '                       {"not_null": {"value": "EMP_B__SAL"}}, {"not_null": {"value": "EMP_B__COMM"}},\n' +
-            '                       {"not_null": {"value": "EMP_B__DEPTNO"}}, {"not_null": {"value": "EMP_B__SLACKER"}},\n' +
-            '                       {"not_null": {"value": "EMP_B__BIRTHDATE"}}]');
+        setConstraints('[{"primary": [{"value": "EMP.EMPNO"}]},\n' +
+            '                       {"foreign": [{"value": "EMP.DEPTNO"}, {"value": "DEPT.DEPTNO"}]},\n' +
+            '                       {"primary": [{"value": "DEPT.DEPTNO"}]}, {"primary": [{"value": "EMPNULLABLES.EMPNO"}]},\n' +
+            '                       {"foreign": [{"value": "EMPNULLABLES.DEPTNO"}, {"value": "DEPT.DEPTNO"}]},\n' +
+            '                       {"primary": [{"value": "EMPNULLABLES_20.EMPNO"}]},\n' +
+            '                       {"foreign": [{"value": "EMPNULLABLES_20.DEPTNO"}, {"value": "DEPT.DEPTNO"}]},\n' +
+            '                       {"primary": [{"value": "EMP_B.EMPNO"}]},\n' +
+            '                       {"foreign": [{"value": "EMP_B.DEPTNO"}, {"value": "DEPT.DEPTNO"}]},\n' +
+            '                       {"not_null": {"value": "EMP.EMPNO"}}, {"not_null": {"value": "EMP.ENAME"}},\n' +
+            '                       {"not_null": {"value": "EMP.JOB"}}, {"not_null": {"value": "EMP.HIREDATE"}},\n' +
+            '                       {"not_null": {"value": "EMP.SAL"}}, {"not_null": {"value": "EMP.COMM"}},\n' +
+            '                       {"not_null": {"value": "EMP.DEPTNO"}}, {"not_null": {"value": "EMP.SLACKER"}},\n' +
+            '                       {"not_null": {"value": "DEPT.DEPTNO"}}, {"not_null": {"value": "DEPT.NAME"}},\n' +
+            '                       {"not_null": {"value": "BONUS.ENAME"}}, {"not_null": {"value": "BONUS.JOB"}},\n' +
+            '                       {"not_null": {"value": "BONUS.SAL"}}, {"not_null": {"value": "BONUS.COMM"}},\n' +
+            '                       {"not_null": {"value": "EMP_B.EMPNO"}}, {"not_null": {"value": "EMP_B.ENAME"}},\n' +
+            '                       {"not_null": {"value": "EMP_B.JOB"}}, {"not_null": {"value": "EMP_B.HIREDATE"}},\n' +
+            '                       {"not_null": {"value": "EMP_B.SAL"}}, {"not_null": {"value": "EMP_B.COMM"}},\n' +
+            '                       {"not_null": {"value": "EMP_B.DEPTNO"}}, {"not_null": {"value": "EMP_B.SLACKER"}},\n' +
+            '                       {"not_null": {"value": "EMP_B.BIRTHDATE"}}]');
     }
 
     function loadCountBug() {
+        const status = document.getElementById('decision');
+        const counterexample = document.getElementById('counterexample');
+        // @ts-ignore
+        status.innerHTML = '';
+        // @ts-ignore
+        counterexample.innerHTML = '';
+
         setQuery1('SELECT PNUM FROM PARTS WHERE (PNUM, QOH) IN (SELECT P.PNUM, IF(ISNULL(CT), 0, CT) AS QOH FROM (SELECT PNUM FROM SUPPLY GROUP BY PNUM) P LEFT JOIN (SELECT PNUM, COUNT(SHIPDATE) AS CT FROM SUPPLY WHERE SHIPDATE < (DATE \'1980-01-01\') GROUP BY PNUM) Q ON P.PNUM=Q.PNUM);');
         setQuery2('WITH TEMP(SUPPNUM, CT) AS (SELECT PNUM, COUNT(SHIPDATE) FROM SUPPLY WHERE SHIPDATE < (DATE \'1980-01-01\') GROUP BY PNUM) SELECT PNUM FROM PARTS, TEMP WHERE PARTS.QOH = TEMP.CT AND PARTS.PNUM = TEMP.SUPPNUM;');
         setBound(1);
@@ -180,11 +249,18 @@ export default function Home() {
     }
 
     function loadMySQLBug() {
+        const status = document.getElementById('decision');
+        const counterexample = document.getElementById('counterexample');
+        // @ts-ignore
+        status.innerHTML = '';
+        // @ts-ignore
+        counterexample.innerHTML = '';
+
         setQuery1('SELECT DISTINCT PAGE_ID AS RECOMMENDED_PAGE FROM (SELECT CASE WHEN USER1_ID=1 THEN USER2_ID WHEN USER2_ID=1 THEN USER1_ID ELSE NULL END AS USER_ID FROM FRIENDSHIP) AS TB1 JOIN LIKES AS TB2 ON TB1.USER_ID=TB2.USER_ID WHERE PAGE_ID NOT IN (SELECT PAGE_ID FROM LIKES WHERE USER_ID=1)');
         setQuery2('SELECT DISTINCT PAGE_ID AS RECOMMENDED_PAGE FROM ( SELECT B.USER_ID, B.PAGE_ID FROM FRIENDSHIP A LEFT JOIN LIKES B ON (A.USER2_ID=B.USER_ID OR A.USER1_ID=B.USER_ID) AND (A.USER1_ID=1 OR A.USER2_ID=1) WHERE B.PAGE_ID NOT IN ( SELECT DISTINCT(PAGE_ID) FROM LIKES WHERE USER_ID=1) ) T');
         setBound(1);
         setSchema('{"FRIENDSHIP":{"USER1_ID":"INT","USER2_ID":"INT"},"LIKES":{"USER_ID":"INT","PAGE_ID":"INT"}}');
-        setConstraints('[{"primary":[{"value":"FRIENDSHIP__USER1_ID"},{"value":"FRIENDSHIP__USER2_ID"}]},{"primary":[{"value":"LIKES__USER_ID"},{"value":"LIKES__PAGE_ID"}]},{"neq":[{"value":"FRIENDSHIP__USER1_ID"},{"value":"FRIENDSHIP__USER2_ID"}]}]');
+        setConstraints('[{"primary":[{"value":"FRIENDSHIP.USER1_ID"},{"value":"FRIENDSHIP.USER2_ID"}]},{"primary":[{"value":"LIKES.USER_ID"},{"value":"LIKES.PAGE_ID"}]},{"neq":[{"value":"FRIENDSHIP.USER1_ID"},{"value":"FRIENDSHIP.USER2_ID"}]}]');
     }
 
     return (
@@ -221,13 +297,29 @@ export default function Home() {
                                            placeholder="2"
                                            value={bound}
                                            onChange={e => setBound(e.target.value)}
-                                           className="input input-bordered input-xs w-14"/>
+                                           className="input input-bordered input-s w-16"/>
 
                             {/* Verify Button*/}
                             <div className="text-center">
                                 <button className="btn btn-accent" onClick={() => handleVerify()}>
                                     Verify
                                 </button>
+
+                                <div className="dropdown p-2">
+                                    <div tabIndex={0} role="button" className="btn" onClick={() => setIsOpen(!isOpen)}>Dialect: {selectedDialect}</div>
+                                    {isOpen && (
+                                        <ul
+                                            tabIndex={0}
+                                            className="dropdown-content menu bg-base-100 rounded-box z-[1] w-52 p-2 shadow"
+                                        >
+                                            <li><a onClick={() => handleSelect("Generic")}>Generic</a></li>
+                                            <li><a onClick={() => handleSelect("MySQL")}>MySQL</a></li>
+                                            <li><a onClick={() => handleSelect("PostgreSQL")}>PostgreSQL</a></li>
+                                            <li><a onClick={() => handleSelect("MariaDB")}>MariaDB</a></li>
+                                            <li><a onClick={() => handleSelect("Oracle")}>Oracle</a></li>
+                                        </ul>
+                                    )}
+                                </div>
 
                             </div>
                         </div>
@@ -386,25 +478,25 @@ export default function Home() {
                     className="flex gap-2 p-2">
 
                     <div className="text-left pt-2">
-                        <button className="btn btn-outline btn-primary w-24" onClick={() => loadFig1Example()}>Load
+                        <button className="btn w-24" onClick={() => loadFig1Example()}>
                             Figure 1 Example
                         </button>
                     </div>
 
                     <div className="text-left pt-2">
-                        <button className="btn btn-outline btn-success w-24" onClick={() => loadCalciteExample()}>Load
+                        <button className="btn w-24" onClick={() => loadCalciteExample()}>
                             Calcite Example
                         </button>
                     </div>
 
                     <div className="text-left pt-2">
-                        <button className="btn btn-outline btn-error w-24" onClick={() => loadMySQLBug()}>Load
+                        <button className="btn w-24" onClick={() => loadMySQLBug()}>
                             MySQL Bug
                         </button>
                     </div>
 
                     <div className="text-left pt-2">
-                        <button className="btn btn-outline btn-info w-24" onClick={() => loadCountBug()}>Load
+                        <button className="btn w-24" onClick={() => loadCountBug()}>
                             COUNT Bug
                         </button>
                     </div>
