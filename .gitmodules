@@ -1,0 +1,3 @@
+[submodule "backend/verieql"]
+	path = backend/verieql
+	url = https://github.com/VeriEQL/VeriEQL
