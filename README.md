@@ -18,41 +18,25 @@
 
 ## 🛠️ Installation
 
-### Dependencies
+### Prerequisites
 
-- NodeJS & NextJS
-- npm & yarn
-
-```shell
-sudo apt install nodejs
-node --version
-curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
-npm install --global yarn next
-```
-
-[//]: # (### Prerequisites)
-
-[//]: # ()
-[//]: # (- Docker)
-
-[//]: # (- Docker composite)
+- Docker
 
 ## 🔖 How to use
 
-backend: initialize a Python environment for VeriEQL.
-```shell
-cd backend
-pip install -r requirements.txt
-python -m uvicorn main:app --reload
-# visit http://localhost:8000 to ensure the backend is activated
+### 1. Clone the repo
+
+```bash
+git clone --recursive https://github.com/whatsmyname/VeriEQL-demo.git
+cd VeriEQL-demo
 ```
 
-frontend: 
-```shell
-cd frontend
-python -m http.server 3000
-# visit http://localhost:3000 to use VeriEQL's web system
+### 2. Build and start the Docker container
+```bash
+chmod +x start.sh && ./start.sh
 ```
+
+After finishing, visit http://localhost:3000 to use VeriEQL.
 
 
 ## ➕ Features
