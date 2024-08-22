@@ -71,6 +71,8 @@ async def verify(benchmark: Benchmark):
                     else:
                         ret['counterexample'] = {}
                         ret['counterexample_sql'] = ''
+                elif result == -1:
+                    raise NotEquivalenceError
                 else:
                     ret['decision'] = 'EQU'
 
@@ -80,9 +82,10 @@ async def verify(benchmark: Benchmark):
                 ret['decision'] = 'NEQ'
                 ret['counterexample'] = {}
                 ret['counterexample_sql'] = ''
+                ret['pysmt_formula'] = ''
 
-                with open('tmp/smt.py', 'r') as smt_file:
-                    ret['pysmt_formula'] = smt_file.read().replace('`', '')
+                # with open('tmp/smt.py', 'r') as smt_file:
+                #     ret['pysmt_formula'] = smt_file.read().replace('`', '')
             except TimeoutError:
                 ret['decision'] = 'TMO'
     except Exception as e:

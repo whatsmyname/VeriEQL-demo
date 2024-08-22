@@ -233,6 +233,28 @@ export default function Home() {
             '                       {"not_null": {"value": "EMP_B.BIRTHDATE"}}]');
     }
 
+    function loadLeetCodeExample() {
+        const status = document.getElementById('decision');
+        const counterexample = document.getElementById('counterexample');
+        // @ts-ignore
+        status.innerHTML = '';
+        // @ts-ignore
+        counterexample.innerHTML = '';
+
+        setQuery1('WITH TEMP AS (SELECT DISTINCT A.CUSTOMER_ID, B.CUSTOMER_ID, B.CUSTOMER_NAME, SUM(CASE WHEN A.PRODUCT_NAME IN (\'A\', \'B\') THEN 1 ELSE 0 END) AS AB, SUM(CASE WHEN A.PRODUCT_NAME = \'C\' THEN 1 ELSE 0 END) AS C, CUSTOMER_NAME FROM ORDERS A JOIN CUSTOMERS B ON A.CUSTOMER_ID = B.CUSTOMER_ID GROUP BY A.CUSTOMER_ID) SELECT CUSTOMER_ID, CUSTOMER_NAME FROM TEMP WHERE AB >= 2 AND C = 0');
+        setQuery2('SELECT CUSTOMER_ID, CUSTOMER_NAME FROM CUSTOMERS WHERE CUSTOMER_ID IN (SELECT DISTINCT CUSTOMER_ID FROM ORDERS WHERE PRODUCT_NAME = \'A\') AND CUSTOMER_ID IN (SELECT DISTINCT CUSTOMER_ID FROM ORDERS WHERE PRODUCT_NAME = \'B\') AND CUSTOMER_ID NOT IN (SELECT DISTINCT CUSTOMER_ID FROM ORDERS WHERE PRODUCT_NAME = \'C\') ORDER BY CUSTOMER_ID');
+        setBound(2);
+        setSchema('{\n' +
+            '  "CUSTOMERS": {"CUSTOMER_ID": "INT", "CUSTOMER_NAME": "VARCHAR"},\n' +
+            '  "ORDERS": {"ORDER_ID": "INT", "CUSTOMER_ID": "int", "PRODUCT_NAME": "VARCHAR"}\n' +
+            '}');
+        setConstraints('[\n' +
+            '  {"primary": [{"value": "CUSTOMERS.CUSTOMER_ID"}]},\n' +
+            '  {"primary": [{"value": "ORDERS.ORDER_ID"}]},\n' +
+            '  {"foreign": [{"value": "ORDERS.CUSTOMER_ID"}, {"value": "CUSTOMERS.CUSTOMER_ID"}]}\n' +
+            ']');
+    }
+
     function loadCountBug() {
         const status = document.getElementById('decision');
         const counterexample = document.getElementById('counterexample');
@@ -244,7 +266,10 @@ export default function Home() {
         setQuery1('SELECT PNUM FROM PARTS WHERE (PNUM, QOH) IN (SELECT P.PNUM, IF(ISNULL(CT), 0, CT) AS QOH FROM (SELECT PNUM FROM SUPPLY GROUP BY PNUM) P LEFT JOIN (SELECT PNUM, COUNT(SHIPDATE) AS CT FROM SUPPLY WHERE SHIPDATE < (DATE \'1980-01-01\') GROUP BY PNUM) Q ON P.PNUM=Q.PNUM);');
         setQuery2('WITH TEMP(SUPPNUM, CT) AS (SELECT PNUM, COUNT(SHIPDATE) FROM SUPPLY WHERE SHIPDATE < (DATE \'1980-01-01\') GROUP BY PNUM) SELECT PNUM FROM PARTS, TEMP WHERE PARTS.QOH = TEMP.CT AND PARTS.PNUM = TEMP.SUPPNUM;');
         setBound(1);
-        setSchema('{"PARTS":{"PNUM":"INT","QOH":"INT"},"SUPPLY":{"PNUM":"INT","QOH":"INT","SHIPDATE":"DATE"}}');
+        setSchema('{\n' +
+            '  "PARTS":{"PNUM":"INT","QOH":"INT"},\n' +
+            '  "SUPPLY":{"PNUM":"INT","QOH":"INT","SHIPDATE":"DATE"}\n' +
+            '}');
         setConstraints('');
     }
 
@@ -259,8 +284,15 @@ export default function Home() {
         setQuery1('SELECT DISTINCT PAGE_ID AS RECOMMENDED_PAGE FROM (SELECT CASE WHEN USER1_ID=1 THEN USER2_ID WHEN USER2_ID=1 THEN USER1_ID ELSE NULL END AS USER_ID FROM FRIENDSHIP) AS TB1 JOIN LIKES AS TB2 ON TB1.USER_ID=TB2.USER_ID WHERE PAGE_ID NOT IN (SELECT PAGE_ID FROM LIKES WHERE USER_ID=1)');
         setQuery2('SELECT DISTINCT PAGE_ID AS RECOMMENDED_PAGE FROM ( SELECT B.USER_ID, B.PAGE_ID FROM FRIENDSHIP A LEFT JOIN LIKES B ON (A.USER2_ID=B.USER_ID OR A.USER1_ID=B.USER_ID) AND (A.USER1_ID=1 OR A.USER2_ID=1) WHERE B.PAGE_ID NOT IN ( SELECT DISTINCT(PAGE_ID) FROM LIKES WHERE USER_ID=1) ) T');
         setBound(1);
-        setSchema('{"FRIENDSHIP":{"USER1_ID":"INT","USER2_ID":"INT"},"LIKES":{"USER_ID":"INT","PAGE_ID":"INT"}}');
-        setConstraints('[{"primary":[{"value":"FRIENDSHIP.USER1_ID"},{"value":"FRIENDSHIP.USER2_ID"}]},{"primary":[{"value":"LIKES.USER_ID"},{"value":"LIKES.PAGE_ID"}]},{"neq":[{"value":"FRIENDSHIP.USER1_ID"},{"value":"FRIENDSHIP.USER2_ID"}]}]');
+        setSchema('{\n' +
+            '  "FRIENDSHIP":{"USER1_ID":"INT","USER2_ID":"INT"},\n' +
+            '  "LIKES":{"USER_ID":"INT","PAGE_ID":"INT"}\n' +
+            '}');
+        setConstraints('[\n' +
+            '  {"primary":[{"value":"FRIENDSHIP.USER1_ID"},{"value":"FRIENDSHIP.USER2_ID"}]},\n' +
+            '  {"primary":[{"value":"LIKES.USER_ID"},{"value":"LIKES.PAGE_ID"}]},\n' +
+            '  {"neq":[{"value":"FRIENDSHIP.USER1_ID"},{"value":"FRIENDSHIP.USER2_ID"}]}\n' +
+            ']');
     }
 
     return (
@@ -486,6 +518,12 @@ export default function Home() {
                     <div className="text-left pt-2">
                         <button className="btn w-24" onClick={() => loadCalciteExample()}>
                             Calcite Example
+                        </button>
+                    </div>
+
+                    <div className="text-left pt-2">
+                        <button className="btn w-24" onClick={() => loadLeetCodeExample()}>
+                            LeetCode Example
                         </button>
                     </div>
 
